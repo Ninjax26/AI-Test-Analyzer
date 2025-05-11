@@ -1,6 +1,6 @@
-<<<<<<< HEAD
-=======
-# AI-Test-Analyzer
+
+
+# AI-Text-Analyzer
 Analyze emotions, sentiment, and toxicity in text with a beautiful, modern web app.
 
 >>>>>>> c27c8aad513bc48497e688168a0cd5a99c254b13
