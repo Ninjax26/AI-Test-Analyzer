@@ -3,9 +3,6 @@
 # AI-Text-Analyzer
 Analyze emotions, sentiment, and toxicity in text with a beautiful, modern web app.
 
->>>>>>> c27c8aad513bc48497e688168a0cd5a99c254b13
-# AI Text Analyzer
-
 A modern, dynamic web app for analyzing text using AI. Detects emotions, sentiment, toxicity, and more—powered by BERT, Transformers, and advanced NLP models.
 
 ## 🚀 Features
