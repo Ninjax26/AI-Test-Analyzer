@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1><i class="fas fa-brain"></i> AI Text Analyzer</h1>
+                    <p class="subtitle">Analyze emotions, sentiment, and toxicity with AI</p>
+                </div>
+                <button id="theme-toggle" title="Toggle dark/light mode" style="background: none; border: none; font-size: 1.7rem; cursor: pointer; color: var(--accent); margin-left: 1rem;">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+
+        {% if error %}
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button id="single-mode-btn" class="active" onclick="toggleMode('single')">Single</button>
+            <button id="batch-mode-btn" onclick="toggleMode('batch')">Batch</button>
+        </div>
+
+        <!-- Single Text Analysis Form -->
+        <div id="single-analysis" class="analysis-form">
+            <form action="/analyze" method="post" id="single-form">
+                <div class="form-group">
+                    <label for="text">Text to analyze:</label>
+                    <textarea id="text" name="text" rows="4" placeholder="Type or paste your text here...">{{ text }}</textarea>
+                </div>
+                <button type="submit" class="btn-analyze">
+                    <i class="fas fa-search"></i> Analyze
+                </button>
+            </form>
+        </div>
+
+        <!-- Batch Analysis Form -->
+        <div id="batch-analysis" class="analysis-form" style="display: none;">
+            <form action="/analyze-batch" method="post" id="batch-form">
+                <div class="form-group">
+                    <label for="texts">Multiple texts (one per line):</label>
+                    <textarea id="texts" name="texts" rows="6" placeholder="Enter each text on a new line...">{{ texts }}</textarea>
+                </div>
+                <button type="submit" class="btn-analyze">
+                    <i class="fas fa-layer-group"></i> Analyze Batch
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Analyzing...</p>
+        </div>
+
+        <!-- Skeleton Loader (hidden by default) -->
+        <div id="skeleton-loader" class="skeleton-container" style="display: none;">
+            <div class="skeleton-card">
+                <div class="skeleton-title"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-text"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-title"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-score"><div class="skeleton-shimmer"></div></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-title"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-text"><div class="skeleton-shimmer"></div></div>
+                <div class="skeleton-bar"><div class="skeleton-shimmer"></div></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        {% if results %}
+        <div class="results-container">
+            <h2>Results</h2>
+            <div class="results-cards">
+                <!-- Emotions Card -->
+                <div class="result-card">
+                    <h3><i class="fas fa-smile"></i> Emotions</h3>
+                    <div class="dominant-emotion">
+                        <span class="label">Primary:</span>
+                        <span class="emotion-{{ dominant_emotion.lower() }}">{{ dominant_emotion }}</span>
+                        <span class="confidence">({{ "%.2f"|format(confidence) }}%)</span>
+                    </div>
+                    <div class="emotions-list">
+                        {% for emotion, score in results.items() %}
+                        <div class="emotion-row">
+                            <span class="emotion-name">{{ emotion }}</span>
+                            <div class="emotion-bar animated-bar" style="width: {{ score * 100 }}%"></div>
+                            <span class="emotion-score">{{ "%.2f"|format(score * 100) }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Sentiment Card -->
+                <div class="result-card sentiment-card">
+                    <h3><i class="fas fa-chart-line"></i> Sentiment</h3>
+                    {% if sentiment %}
+                    <div class="sentiment-details">
+                        <div class="sentiment-row">
+                            <span class="sentiment-label">Positive</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-bar-fill positive animated-bar" style="width: {{ sentiment.positive * 100 }}%">{{ "%.2f"|format(sentiment.positive) }}</div>
+                            </div>
+                            <span class="sentiment-value">{{ "%.2f"|format(sentiment.positive) }}</span>
+                        </div>
+                        <div class="sentiment-row">
+                            <span class="sentiment-label">Neutral</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-bar-fill neutral animated-bar" style="width: {{ sentiment.neutral * 100 }}%">{{ "%.2f"|format(sentiment.neutral) }}</div>
+                            </div>
+                            <span class="sentiment-value">{{ "%.2f"|format(sentiment.neutral) }}</span>
+                        </div>
+                        <div class="sentiment-row">
+                            <span class="sentiment-label">Negative</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-bar-fill negative animated-bar" style="width: {{ sentiment.negative * 100 }}%">{{ "%.2f"|format(sentiment.negative) }}</div>
+                            </div>
+                            <span class="sentiment-value">{{ "%.2f"|format(sentiment.negative) }}</span>
+                        </div>
+                        <div class="sentiment-compound">
+                            <span>Compound Score</span>
+                            <span class="sentiment-compound-value">{{ "%.2f"|format(sentiment.compound) }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="info-message">Sentiment analysis not available.</div>
+                    {% endif %}
+                </div>
+                <!-- Toxicity Card -->
+                <div class="result-card">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Toxicity</h3>
+                    {% if toxicity %}
+                    <div class="toxicity-status {% if toxicity.is_toxic %}toxic{% else %}safe{% endif %}">
+                        {% if toxicity.is_toxic %}
+                        <i class="fas fa-exclamation-triangle"></i> Toxic content detected!
+                        {% else %}
+                        <i class="fas fa-check-circle"></i> No toxic content.
+                        {% endif %}
+                    </div>
+                    <div class="toxicity-bar" style="width: {{ toxicity.score * 100 }}%"></div>
+                    <div class="toxicity-score">Score: {{ "%.2f"|format(toxicity.score) }}</div>
+                    {% else %}
+                    <div class="info-message">Toxicity analysis not available.</div>
+                    {% endif %}
+                </div>
+                <!-- Summary Card -->
+                {% if summary %}
+                <div class="result-card">
+                    <h3><i class="fas fa-file-alt"></i> Summary</h3>
+                    <div class="summary-text">{{ summary }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if batch_results %}
+        <div class="results-container batch-results">
+            <h2>Batch Results</h2>
+            {% for text, result in batch_results %}
+            <div class="batch-item">
+                <div class="analyzed-text">
+                    <p><strong>Text {{ loop.index }}:</strong> "{{ text }}"</p>
+                </div>
+                <div class="emotions-compact">
+                    {% for emotion, score in result.items() %}
+                    <div class="emotion-pill emotion-{{ emotion.lower() }}">
+                        {{ emotion }}: {{ "%.2f"|format(score * 100) }}%
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <footer>
+            <span id="api-status-badge" style="display: inline-block; margin-right: 0.7rem; padding: 0.18em 0.8em; border-radius: 999px; font-size: 0.98em; font-weight: 600; background: #334155; color: #fff; vertical-align: middle;">Checking...</span>
+            Powered by BERT and Transformers | <a href="/api/health" target="_blank">API Status</a>
+        </footer>
+    </div>
+
+    <!-- Feedback Button and Modal -->
+    <button id="feedback-btn" title="Feedback" style="position: fixed; bottom: 32px; right: 32px; z-index: 1001; background: var(--accent); color: #fff; border: none; border-radius: 50%; width: 56px; height: 56px; box-shadow: 0 4px 16px rgba(30,41,59,0.18); font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+    <div id="feedback-modal" style="display:none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(30,41,59,0.45); align-items: center; justify-content: center;">
+        <div id="feedback-modal-content" style="background: var(--container-bg); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); padding: 2rem 2rem 1.5rem 2rem; max-width: 350px; width: 90vw; position: relative;">
+            <button id="feedback-close" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.3rem; color: var(--accent); cursor: pointer;">&times;</button>
+            <h2 style="margin-top:0; color: var(--accent); font-size: 1.3rem;">Feedback</h2>
+            <div id="feedback-stars" style="display: flex; gap: 0.3rem; margin: 1rem 0 1.2rem 0; font-size: 1.7rem; color: #eab308; cursor: pointer;">
+                <span data-star="1">&#9733;</span><span data-star="2">&#9733;</span><span data-star="3">&#9733;</span><span data-star="4">&#9733;</span><span data-star="5">&#9733;</span>
+            </div>
+            <textarea id="feedback-comment" rows="3" placeholder="Your comments..." style="width: 100%; border-radius: 10px; border: none; background: var(--input-bg); color: var(--text-main); padding: 0.7rem; font-size: 1rem; margin-bottom: 1rem;"></textarea>
+            <button id="feedback-submit" style="width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 0.7rem 0; font-size: 1.1rem; font-weight: 700; cursor: pointer;">Submit</button>
+            <div id="feedback-thankyou" style="display:none; text-align:center; color: var(--success); font-weight:600; margin-top:1rem;">Thank you for your feedback! 💙</div>
+        </div>
+    </div>
+
+    <script>
+        // Show loading indicator when form is submitted
+        document.getElementById('single-form').addEventListener('submit', function() {
+            document.getElementById('loading').style.display = 'flex';
+        });
+        document.getElementById('batch-form').addEventListener('submit', function() {
+            document.getElementById('loading').style.display = 'flex';
+        });
+        function toggleMode(mode) {
+            if (mode === 'single') {
+                document.getElementById('single-analysis').style.display = 'block';
+                document.getElementById('batch-analysis').style.display = 'none';
+                document.getElementById('single-mode-btn').classList.add('active');
+                document.getElementById('batch-mode-btn').classList.remove('active');
+            } else {
+                document.getElementById('single-analysis').style.display = 'none';
+                document.getElementById('batch-analysis').style.display = 'block';
+                document.getElementById('single-mode-btn').classList.remove('active');
+                document.getElementById('batch-mode-btn').classList.add('active');
+            }
+        }
+        // Animate bars on results render
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                document.querySelectorAll('.animated-bar').forEach(function(bar) {
+                    bar.style.width = bar.style.width; // trigger reflow
+                });
+            }, 100);
+        });
+        // Theme toggle logic
+        (function() {
+            const body = document.body;
+            const toggleBtn = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const THEME_KEY = 'ai-text-theme';
+            function setTheme(theme) {
+                body.classList.remove('dark-theme', 'light-theme');
+                body.classList.add(theme + '-theme');
+                icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+                localStorage.setItem(THEME_KEY, theme);
+            }
+            // On load
+            let theme = localStorage.getItem(THEME_KEY);
+            if (!theme) {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            setTheme(theme);
+            // Toggle on click
+            toggleBtn.addEventListener('click', function() {
+                setTheme(body.classList.contains('dark-theme') ? 'light' : 'dark');
+            });
+        })();
+        // Show skeleton loader while loading
+        function showSkeletonLoader(show) {
+            document.getElementById('skeleton-loader').style.display = show ? 'flex' : 'none';
+            var results = document.querySelector('.results-container');
+            if (results) results.style.display = show ? 'none' : '';
+        }
+        // Show skeletons when loading spinner is visible
+        var loading = document.getElementById('loading');
+        if (loading) {
+            var observer = new MutationObserver(function() {
+                showSkeletonLoader(loading.style.display !== 'none');
+            });
+            observer.observe(loading, { attributes: true, attributeFilter: ['style'] });
+        }
+        // Feedback Modal Logic
+        (function() {
+            const btn = document.getElementById('feedback-btn');
+            const modal = document.getElementById('feedback-modal');
+            const close = document.getElementById('feedback-close');
+            const stars = document.querySelectorAll('#feedback-stars span');
+            const comment = document.getElementById('feedback-comment');
+            const submit = document.getElementById('feedback-submit');
+            const thankyou = document.getElementById('feedback-thankyou');
+            let selected = 0;
+            btn.onclick = () => { modal.style.display = 'flex'; };
+            close.onclick = () => { modal.style.display = 'none'; reset(); };
+            modal.onclick = e => { if (e.target === modal) { modal.style.display = 'none'; reset(); } };
+            stars.forEach(star => {
+                star.onclick = () => {
+                    selected = parseInt(star.getAttribute('data-star'));
+                    stars.forEach((s, i) => s.style.color = i < selected ? '#eab308' : '#cbd5e1');
+                };
+            });
+            function reset() {
+                selected = 0;
+                stars.forEach(s => s.style.color = '#eab308');
+                comment.value = '';
+                thankyou.style.display = 'none';
+                submit.style.display = '';
+            }
+            submit.onclick = function(e) {
+                e.preventDefault();
+                if (selected === 0 && !comment.value.trim()) return;
+                // Here you could send feedback to a backend
+                submit.style.display = 'none';
+                thankyou.style.display = 'block';
+                setTimeout(() => { modal.style.display = 'none'; reset(); }, 1800);
+            };
+        })();
+        // API Status Badge Logic
+        (function() {
+            const badge = document.getElementById('api-status-badge');
+            function setStatus(online) {
+                badge.textContent = online ? 'API Online' : 'API Down';
+                badge.style.background = online ? '#22c55e' : '#ef4444';
+                badge.style.color = '#fff';
+            }
+            async function checkStatus() {
+                try {
+                    const res = await fetch('/api/health', {cache: 'no-store'});
+                    setStatus(res.ok);
+                } catch {
+                    setStatus(false);
+                }
+            }
+            checkStatus();
+            setInterval(checkStatus, 5 * 60 * 1000);
+        })();
+    </script>
+</body>
+</html>
+
