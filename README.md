@@ -74,9 +74,6 @@ A modern, dynamic web app for analyzing text using AI. Detects emotions, sentime
 
 ---
 
-<<<<<<< HEAD
 **Feel free to fork, star, and contribute!** 
 =======
-**Feel free to fork, star, and contribute!**
 
->>>>>>> c27c8aad513bc48497e688168a0cd5a99c254b13
